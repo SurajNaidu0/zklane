@@ -1,4 +1,4 @@
-// ZCASH_MODE=real — zingo-cli (zingolib v8) on testnet.
+// ZCASH_MODE=real — zingo-cli (zingolib v8) on ZCASH_CHAIN (testnet default, or mainnet).
 // Each one-shot zingo-cli call re-bootstraps the Nym mixnet + syncs (20–170 s), so we keep ONE
 // long-lived interactive session per wallet and pipe commands over stdin.
 // Delimiting: after each command we send an unknown command `zkmark_<n>`; zingo prints
@@ -26,7 +26,8 @@ class ZingoSession {
     if (this.starting) return this.starting;
     this.starting = (async () => {
       fs.mkdirSync(this.dir, { recursive: true });
-      const args = ["--chain", "testnet", "--data-dir", this.dir];
+      // --remember-online = connectivity consent (first boot is offline otherwise)
+      const args = ["--chain", config.zcashChain, "--data-dir", this.dir, "--remember-online"];
       if (config.lightwalletd) args.push("--server", config.lightwalletd);
       const p = spawn(config.zingoBin, args, { stdio: ["pipe", "pipe", "pipe"] });
       this.p = p;
@@ -87,7 +88,7 @@ export class ZingoWallet implements ZcashWallet {
   }
   async freshAddress() {
     const out = await this.s.cmd("new_address o");
-    const m = out.match(/utest1[0-9a-z]+/);
+    const m = out.match(/\b(utest1|u1)[0-9a-z]+/);
     return m ? m[0] : this.address();
   }
   async balance() {

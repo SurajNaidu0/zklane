@@ -14,9 +14,12 @@ if (fs.existsSync(envFile)) {
 
 const env = (k: string, d: string) => process.env[k] ?? d;
 const num = (k: string, d: number) => Number(process.env[k] ?? d);
+const CHAIN = env("ZCASH_CHAIN", "testnet") as "testnet" | "mainnet";
+const MAIN = CHAIN === "mainnet";
 
 export const config = {
   zcashMode: env("ZCASH_MODE", "mock") as "real" | "mock",
+  zcashChain: CHAIN,
   port: num("PORT", 8787),
   dataDir: path.resolve(ROOT, env("DATA_DIR", "data")),
   zkBin: path.resolve(ROOT, env("ZK_BIN", "libzkchannels/target/release/zkchannels-cli")),
@@ -26,16 +29,17 @@ export const config = {
   merchPort: num("ZK_MERCH_PORT", 12347),
   custPort: num("ZK_CUST_PORT", 12346),
   // 1 channel unit = UNIT_ZATS zatoshis (SPEC-v1 §2: 1 unit = 0.0001 ZEC)
-  unitZats: num("UNIT_ZATS", 10_000),
-  openZats: num("OPEN_ZATS", 10_000_000), // 0.1 ZEC = 1000 units
+  unitZats: num("UNIT_ZATS", MAIN ? 1_000 : 10_000),
+  openZats: num("OPEN_ZATS", MAIN ? 1_000_000 : 10_000_000), // mainnet 0.01 ZEC, testnet 0.1 ZEC (1000 units)
   feeZats: num("FEE_ZATS", 10_000),
   minConf: num("MIN_CONF", 1),
   pollMs: num("WATCH_POLL_MS", 10_000),
   zingoBin: env("ZINGO_BIN", path.join(ROOT, "tools/zingolib/target/release/zingo-cli")),
-  lightwalletd: env("LIGHTWALLETD", ""),
-  merchantWalletDir: path.resolve(ROOT, env("MERCHANT_WALLET_DIR", "data/wallet-merchant")),
-  customerWalletDir: path.resolve(ROOT, env("CUSTOMER_WALLET_DIR", "data/wallet-customer")),
-  explorerTxUrl: env("EXPLORER_TX_URL", "https://testnet.zcashexplorer.app/transactions/"),
+  // mainnet: zingo-cli has a default indexer; testnet needs one named
+  lightwalletd: env("LIGHTWALLETD", MAIN ? "" : "https://testnet.zec.rocks:443"),
+  merchantWalletDir: path.resolve(ROOT, env("MERCHANT_WALLET_DIR", MAIN ? "data/wallet-merchant-mainnet" : "data/wallet-merchant")),
+  customerWalletDir: path.resolve(ROOT, env("CUSTOMER_WALLET_DIR", MAIN ? "data/wallet-customer-mainnet" : "data/wallet-customer")),
+  explorerTxUrl: env("EXPLORER_TX_URL", MAIN ? "https://mainnet.zcashexplorer.app/transactions/" : "https://testnet.zcashexplorer.app/transactions/"),
   mockBlockMs: num("MOCK_BLOCK_MS", 5_000),
 };
 

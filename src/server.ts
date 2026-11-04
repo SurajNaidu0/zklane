@@ -29,6 +29,7 @@ app.get("/events", sseHandler);
 
 app.get("/api/status", h(async () => ({
   mode: config.zcashMode,
+  chain: config.zcashChain,
   height: orch.height,
   unit_zats: config.unitZats,
   open_zats: config.openZats,
@@ -63,7 +64,7 @@ app.get("/api/merchant/payments", h(() => ({ payments: q.payments.all(), stats: 
 app.post("/api/watch", h(async () => { await orch.tick(); return { ok: true }; }));
 
 app.listen(config.port, () => {
-  console.log(`zkLane on http://localhost:${config.port}  (ZCASH_MODE=${config.zcashMode})`);
+  console.log(`zkLane on http://localhost:${config.port}  (ZCASH_MODE=${config.zcashMode}, chain=${config.zcashChain})`);
   emit("server.ready", { mode: config.zcashMode });
 });
 

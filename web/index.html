@@ -64,7 +64,7 @@ tr.new{animation:flash 1.2s}
 <header>
   <h1><b>zk</b>Lane</h1>
   <span id="mode" class="pill">…</span>
-  <span class="pill">zkChannels (libzkchannels) · Zcash testnet</span>
+  <span class="pill">zkChannels (libzkchannels) · Zcash</span>
   <span class="muted" style="margin-left:auto">height <b id="height">–</b></span>
 </header>
 
@@ -262,7 +262,7 @@ on("cheat.detected", (d) => {
 
 (async () => {
   S = await api("/api/status");
-  $("mode").textContent = S.mode === "real" ? "Zcash: REAL testnet" : "Zcash: MOCK chain";
+  $("mode").textContent = S.mode === "real" ? `Zcash: REAL ${S.chain}` : "Zcash: MOCK chain";
   $("mode").className = "pill " + S.mode;
   $("height").textContent = S.height || "–";
   $("unitInfo").textContent = `1 unit = ${zec(S.unit_zats)} · channel size ${zec(S.open_zats)}`;
