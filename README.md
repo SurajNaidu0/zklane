@@ -61,18 +61,9 @@ Customer (agent)                      Merchant
 Prereqs: Rust, Node 20+, Redis, protobuf (for zingo-cli).
 
 ```bash
-# 1. libzkchannels (ZK mode)
-git clone https://github.com/boltlabs-inc/libzkchannels.git && cd libzkchannels
-git apply ../libzkchannels-zkmode.patch && git apply ../libzkchannels-zklane.patch
-echo 'fn main(){}' > build.rs
-cargo update -p num-bigint@0.4.0 --precise 0.4.6
-RUSTFLAGS=-Awarnings cargo build --release --bin zkchannels-cli && cd ..
-
-# 2. app
-npm install
-scripts/redis.sh                       # dedicated redis on :6390
+scripts/setup.sh                       # clones + patches + builds libzkchannels, npm install, redis on :6390
 ZCASH_MODE=mock npm start              # http://localhost:8787
-scripts/demo.sh                        # scripted end-to-end run (API)
+scripts/demo.sh                        # scripted end-to-end run: open, fund, pay, overspend rejected, cheat refused, refund
 ```
 
 Real testnet mode: build `zingo-cli` and `nym-proxy` from zingolib (see `docs/zingo-commands.md`), fund the customer wallet from a testnet faucet, then:

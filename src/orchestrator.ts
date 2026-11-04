@@ -178,9 +178,11 @@ export class Orchestrator {
     const c = this.get(name);
     if (c.status !== "open") throw httpErr(409, `channel is ${c.status}`);
     this.cheating.add(name);
-    await this.zk.snapshotCustState(name, "honest");
-    await this.zk.restoreCustState(name, "old");
     try {
+      await this.zk.snapshotCustState(name, "honest");
+    } catch (e) { this.cheating.delete(name); throw e; }
+    try {
+      await this.zk.restoreCustState(name, "old");
       const cc = await this.zk.custClose(name, "cheat");
       emit("cheat.attempt", { name, claimed_units: cc.custBal });
       const v = await this.zk.merchClose(c.channel_id!, cc.file);
