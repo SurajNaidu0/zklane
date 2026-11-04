@@ -202,7 +202,7 @@ async function act(label, fn) {
 $("bOpen").onclick = () => act("open", async () => {
   $("cheat").classList.remove("show");
   log("opening channel (zkChannels open + init)…");
-  const r = await api("/api/channels", {});
+  const r = await api("/api/channels", S.chain === "mainnet" && S.mode === "real" ? { amount_zats: 980000 } : {});
   chan = { name: r.name }; try { localStorage.setItem("zklane.chan", r.name); } catch {}
   log("channel 0x" + r.channel_id.slice(0, 16) + "… initialized, awaiting funds");
 });

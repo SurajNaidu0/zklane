@@ -39,7 +39,8 @@ export class Orchestrator {
     if (requestedZats === undefined) {
       // size the channel to what the customer can actually fund (leave room for the network fee)
       const bal = await this.customerWallet.balance().catch(() => null);
-      if (bal && bal.spendableZats > 0) amountZats = Math.min(amountZats, bal.spendableZats - 2 * config.feeZats);
+      const have = bal ? Math.max(bal.spendableZats, bal.totalZats) : 0;
+      if (have > 2 * config.feeZats) amountZats = Math.min(amountZats, have - 2 * config.feeZats);
     }
     // a new open supersedes channels that were never funded
     for (const c of q.byStatus.all("awaiting_funds")) updateChannel(c.name, { status: "abandoned" });

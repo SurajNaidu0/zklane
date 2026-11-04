@@ -92,9 +92,10 @@ export class ZingoWallet implements ZcashWallet {
     return m ? m[0] : this.address();
   }
   async balance() {
-    const spendable = Number((await this.s.json("spendable_balance")).spendable_balance ?? 0);
+    const toZats = (v: unknown) => Number(String(v ?? 0).replace(/[_,\s]/g, "")) || 0; // zingo may print 1_000_000
+    const spendable = toZats((await this.s.json("spendable_balance")).spendable_balance);
     const text = await this.s.cmd("balance");
-    const total = [...text.matchAll(/total_\w+_balance:\s*(\d+)/g)].reduce((a, m) => a + Number(m[1]), 0);
+    const total = [...text.matchAll(/total_\w+_balance:\s*([\d_,]+)/g)].reduce((a, m) => a + toZats(m[1]), 0);
     return { spendableZats: spendable, totalZats: total };
   }
   async send(to: string, zats: number, memo: string) {
