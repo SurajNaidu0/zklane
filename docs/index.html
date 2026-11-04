@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zkLane</title>
+<meta name="description" content="Private micropayments for AI agents: real zkChannels ZK-proof payments with shielded Zcash funding and refund.">
+<style>
+:root{--bg:#0d1014;--panel:#151a21;--line:#262d38;--text:#e7ebf0;--muted:#8a95a5;--accent:#f4b728;--ok:#3ecf8e;--info:#6aa8ff;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f7f6f2;--panel:#fff;--line:#e3e0d8;--text:#1b1f24;--muted:#5d6672;--accent:#b8860b;--ok:#1a8f5a;--info:#2a62c9}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:920px;margin:0 auto;padding:40px 16px 64px}
+h1{font-size:44px;margin:0;letter-spacing:-.5px} h1 b{color:var(--accent)}
+.lead{font-size:20px;color:var(--text);margin:10px 0 6px}
+.muted{color:var(--muted)}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin:40px 0 12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+video{width:100%;border-radius:12px;border:1px solid var(--line);background:#000}
+table{width:100%;border-collapse:collapse}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.mono{font-family:var(--mono);font-size:13px;word-break:break-all}
+a{color:var(--info)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.btn{display:inline-block;padding:10px 16px;border-radius:8px;border:1px solid var(--line);text-decoration:none;color:var(--text);background:var(--panel)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#111;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:700px){.grid{grid-template-columns:1fr} h1{font-size:34px}}
+.stat{font-size:28px;font-weight:650}
+.ok{color:var(--ok)}
+ul{padding-left:20px} li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1><b>zk</b>Lane</h1>
+  <p class="lead">Private micropayments for AI agents on Zcash.</p>
+  <p class="muted">One shielded Zcash transaction opens a channel. Every payment after that is a real zkChannels zero-knowledge proof that the merchant verifies without learning who paid, how much is left, or which payments belong together. One shielded transaction refunds the rest.</p>
+  <div class="btns">
+    <a class="btn primary" href="https://github.com/SurajNaidu0/zklane">Code &amp; README</a>
+    <a class="btn" href="#video">Demo video</a>
+    <a class="btn" href="#mainnet">Mainnet transactions</a>
+  </div>
+
+  <h2>Result on Zcash mainnet</h2>
+  <div class="grid">
+    <div class="card"><div class="stat">2</div><div class="muted">on-chain txs, both fully shielded</div></div>
+    <div class="card"><div class="stat">12</div><div class="muted">private off-chain payments</div></div>
+    <div class="card"><div class="stat">280 ms</div><div class="muted">avg ZK proof verification per payment</div></div>
+  </div>
+
+  <h2 id="video">Demo video</h2>
+  <video controls preload="metadata" src="media/zklane-demo.mp4"></video>
+  <p class="muted" style="font-size:14px">UI walkthrough in mock-chain mode: open → fund → ZK payments → cheat with a revoked state (refused) → refund. It ends with the real mainnet txids.</p>
+
+  <h2 id="mainnet">Mainnet transactions</h2>
+  <div class="card">
+    <table>
+      <tr><td><b>Channel open</b><br><span class="muted">shielded Orchard · 0.0098 ZEC · block 3541708<br>memo <span class="mono">zklane:v1:open:&lt;channel_id&gt;</span></span></td>
+          <td><a class="mono" href="https://blockchair.com/zcash/transaction/5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9">5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9</a></td></tr>
+      <tr><td><b>12 payments</b><br><span class="muted">off-chain zkChannels NIZK proofs</span></td><td class="muted">70 units, 273–304 ms each. The merchant's log has no payer, channel or balance column.</td></tr>
+      <tr><td><b>Close + refund</b><br><span class="muted">shielded Orchard · 0.009 ZEC to a fresh address · block 3541722</span></td>
+          <td><a class="mono" href="https://blockchair.com/zcash/transaction/5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3">5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3</a></td></tr>
+    </table>
+    <p class="muted" style="font-size:14px;margin-bottom:0">Both have 0 transparent inputs and 0 transparent outputs: amounts, addresses and memos stay hidden, and nothing on-chain links funding to refund.</p>
+  </div>
+
+  <h2>What's real, what's trusted</h2>
+  <div class="card">
+    <ul>
+      <li><b class="ok">Real:</b> zkChannels payments (libzkchannels: CL signatures, Pedersen commitments, range proofs), revocation and cheat detection, shielded Zcash funding and refund via zingo-cli over the Nym mixnet.</li>
+      <li><b>Trusted:</b> escrow. The merchant holds the funds, because Zcash can't yet enforce channel closes on-chain. A Transparent Zcash Extension is the roadmap.</li>
+      <li><b>Revealed to the merchant:</b> payment amounts and timing, channel size at open and close, and the customer's IP (zkChannels runs over plain TCP).</li>
+    </ul>
+  </div>
+
+  <p class="muted" style="margin-top:40px;font-size:14px">Free Society Hack · Zcash Privacy track · <a href="https://github.com/SurajNaidu0/zklane">github.com/SurajNaidu0/zklane</a></p>
+</main>
+</body>
+</html>
