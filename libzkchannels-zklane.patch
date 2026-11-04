@@ -1,0 +1,85 @@
+diff --git a/src/cli_zk.rs b/src/cli_zk.rs
+index f746384..e730c6e 100644
+--- a/src/cli_zk.rs
++++ b/src/cli_zk.rs
+@@ -191,6 +191,9 @@ pub struct Init {
+ pub struct Activate {
+     #[structopt(long = "party")]
+     party: Party,
++    /// zkLane: real Zcash funding txid (hex, 32 bytes). Merchant marks channel open with it.
++    #[structopt(long = "escrow-txid")]
++    escrow_txid: Option<String>,
+     #[structopt(short = "i", long = "own-ip", default_value = "127.0.0.1")]
+     own_ip: String,
+     #[structopt(short = "p", long = "own-port")]
+@@ -526,7 +529,8 @@ fn main() -> Result<(), confy::ConfyError> {
+     let args = Cli::from_args();
+     let cfg: ZKChannelConfig = confy::load("zkchannel_cfg")?;
+     // println!("Loaded config: {:#?}", cfg);
+-    let db_url = cfg.db_url.clone();
++    // zkLane: allow per-party DB override (separate customer/merchant stores)
++    let db_url = std::env::var("ZKLANE_DB_URL").unwrap_or(cfg.db_url.clone());
+ 
+     println!("******************************************");
+ 
+@@ -581,7 +585,13 @@ fn main() -> Result<(), confy::ConfyError> {
+             },
+         },
+         Command::ACTIVATE(activate) => match activate.party {
+-            Party::MERCH => merch::activate(create_connection!(activate), &db_url).unwrap(),
++            Party::MERCH => {
++                let txid = activate
++                    .escrow_txid
++                    .clone()
++                    .or(std::env::var("ZKLANE_ESCROW_TXID").ok());
++                merch::activate(create_connection!(activate), &db_url, txid).unwrap()
++            }
+             Party::CUST => {
+                 cust::activate(create_connection!(activate), &db_url, activate.channel_name)
+                     .unwrap()
+@@ -1333,18 +1343,13 @@ mod merch {
+ 
+         conn.send(&msg5);
+ 
+-        // if broadcast successful, then we can mark the channel as open
+-        let escrow_txid = [1u8; 32];
+-        handle_error_result!(zkproofs::merchant_mark_open_channel(
+-            escrow_txid.clone(),
+-            &mut merch_state
+-        ));
+-
++        // zkLane: marking the channel open moved to activate(), which the
++        // orchestrator only runs after the real Zcash funding tx is confirmed.
+         merch_save_state_in_db(&mut db.conn, None, None, &merch_state)?;
+         Ok(())
+     }
+ 
+-    pub fn activate(conn: &mut Conn, db_url: &String) -> Result<(), String> {
++    pub fn activate(conn: &mut Conn, db_url: &String, escrow_txid_hex: Option<String>) -> Result<(), String> {
+         let rng = &mut rand::thread_rng();
+         let mut db = handle_error_result!(get_merch_db_connection(db_url.clone()));
+         let key = String::from("cli:merch_db");
+@@ -1356,6 +1361,23 @@ mod merch {
+         let mut merch_state: MerchantState<Bls12> =
+             handle_error_result!(serde_json::from_str(&ser_merch_state));
+ 
++        // zkLane: mark open against the real Zcash escrow (funding) txid
++        let txid_hex = match escrow_txid_hex {
++            Some(t) => t,
++            None => return Err(String::from("missing --escrow-txid (real funding txid required)")),
++        };
++        let txid_bytes = handle_error_result!(hex::decode(txid_hex.trim_start_matches("0x")));
++        if txid_bytes.len() != 32 {
++            return Err(format!("escrow txid must be 32 bytes, got {}", txid_bytes.len()));
++        }
++        let mut escrow_txid = [0u8; 32];
++        escrow_txid.copy_from_slice(&txid_bytes);
++        handle_error_result!(zkproofs::merchant_mark_open_channel(
++            escrow_txid.clone(),
++            &mut merch_state
++        ));
++        println!("Merchant marked channel open with escrow txid: {}", txid_hex);
++
+         let msg2 = conn.wait_for(None, false);
+ 
+         let channel_token: ChannelToken<Bls12> =

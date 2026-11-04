@@ -1,0 +1,6 @@
+libzkchannels/
+tools/
+data/
+node_modules/
+*.log
+.env

@@ -1,0 +1,93 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index fc3177a..a18f5dd 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -9,7 +9,7 @@ homepage = "https://github.com/boltlabs-inc/libzkchannels"
+ repository = "https://github.com/boltlabs-inc/libzkchannels"
+ license = "MIT License"
+ build = "build.rs"
+-links = "token-utils"
++
+
+ [dependencies]
+ rand = "0.7"
+@@ -37,7 +37,7 @@ bufstream = "0.1"
+ zkchan-tx = { git = "https://github.com/boltlabs-inc/zkchan-tx" }
+ enum-display-derive = "0.1.0"
+ confy = "0.4"
+-num-bigint = "0.3.2"
++num-bigint = "0.3.3"
+
+ [build-dependencies]
+ bindgen="*"
+@@ -49,14 +49,7 @@ rusty-fork = "0.2.1"
+ [lib]
+ crate-type = ["lib", "cdylib", "staticlib"]
+
+-[[bin]]
+-name = "zkchannels-mpc"
+-path = "src/cli_mpc.rs"
+-
+ [[bin]]
+ name = "zkchannels-cli"
+ path = "src/cli_zk.rs"
+
+-[[bin]]
+-name = "mpchelpers"
+-path = "src/mpc_helpers.rs"
+diff --git a/src/database.rs b/src/database.rs
+index 36a529d..0f5cb38 100644
+--- a/src/database.rs
++++ b/src/database.rs
+@@ -834,7 +834,7 @@ pub fn store_file_in_db(
+ mod tests {
+     use super::*;
+     use rand::RngCore;
+-    use util::hash_to_slice;
++    use util::sha3_hash_to_slice as hash_to_slice;
+
+     #[test]
+     fn test_redis_unlink_set() {
+diff --git a/src/lib.rs b/src/lib.rs
+index a5285ae..873c152 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -52,19 +52,19 @@ extern crate rusty_fork;
+ extern crate rand_xorshift;
+ extern crate serde_bytes;
+
+-pub mod bindings;
++// pub mod bindings;
+ pub mod ccs08;
+-pub mod channels_mpc;
++// pub mod channels_mpc;
+ pub mod channels_util;
+ pub mod channels_zk;
+ pub mod cl;
+ pub mod database;
+-pub mod ecdsa_partial;
++// pub mod ecdsa_partial;
+ pub mod ffishim_bls12;
+ // pub mod ffishim_bn256;
+-pub mod ffishim_mpc;
+-pub mod mpc;
+-pub mod mpcwrapper;
++// pub mod ffishim_mpc;
++// pub mod mpc;
++// pub mod mpcwrapper;
+ pub mod nizk;
+ pub mod ped92;
+ pub mod tze_utils;
+@@ -72,9 +72,9 @@ pub mod util;
+ pub mod wallet;
+ pub mod zkproofs;
+
+-#[cfg(test)]
+-pub mod test_e2e;
+-pub mod test_mpc;
++// #[cfg(test)]
++// pub mod test_e2e;
++// pub mod test_mpc;
+
+ pub use channels_util::FundingTxInfo;
+ use ff::{Field, Rand};
