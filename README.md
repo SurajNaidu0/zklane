@@ -8,6 +8,18 @@ Built for Free Society Hack: Zcash Privacy track. **Demo video:** [`docs/media/z
 
 ---
 
+> ## Flagship: real zkChannels payments on Zcash mainnet
+>
+> | | |
+> |---|---|
+> | **Channel open** (shielded Orchard tx, 0.0098 ZEC, block 3541708) | [`5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9`](https://blockchair.com/zcash/transaction/5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9) |
+> | **12 off-chain ZK payments** | 70 units, 273–304 ms each (avg 280 ms), the merchant never learns the payer or balance |
+> | **Close + refund** (shielded Orchard tx, 0.009 ZEC to a fresh address, block 3541722) | [`5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3`](https://blockchair.com/zcash/transaction/5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3) |
+>
+> **2 on-chain transactions carried 12 private payments.** Both txs have **0 transparent inputs and 0 transparent outputs**, so amounts, addresses and the channel-id memos stay hidden, and nothing on-chain links the funding to the refund. Mainnet was used because no testnet ZEC was obtainable. [Full step-by-step ↓](#the-mainnet-run-step-by-step) · **Demo video:** [`docs/media/zklane-demo.mp4`](docs/media/zklane-demo.mp4)
+
+---
+
 ## Why
 
 Agents that pay per API call or per item need micropayments that are instant and cheap. Lightning-style channels give speed, but the merchant sees one channel id and a running balance for every payment, which is a full behavioural profile of the payer. zkLane gives the same speed with **payer privacy**: each payment is a zero-knowledge proof that *some* valid, unrevoked channel has enough balance.
