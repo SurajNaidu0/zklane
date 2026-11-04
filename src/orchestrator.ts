@@ -34,7 +34,15 @@ export class Orchestrator {
   }
 
   // ---------- open ----------
-  async createChannel(amountZats = config.openZats) {
+  async createChannel(requestedZats?: number) {
+    let amountZats = requestedZats ?? config.openZats;
+    if (requestedZats === undefined) {
+      // size the channel to what the customer can actually fund (leave room for the network fee)
+      const bal = await this.customerWallet.balance().catch(() => null);
+      if (bal && bal.spendableZats > 0) amountZats = Math.min(amountZats, bal.spendableZats - 2 * config.feeZats);
+    }
+    // a new open supersedes channels that were never funded
+    for (const c of q.byStatus.all("awaiting_funds")) updateChannel(c.name, { status: "abandoned" });
     const units = Math.floor(amountZats / config.unitZats);
     if (units < 200) throw httpErr(400, `amount too small (min ${200 * config.unitZats} zats)`);
     const name = "c" + crypto.randomBytes(5).toString("hex");

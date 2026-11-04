@@ -158,7 +158,7 @@ function render() {
   $("cid").textContent = chan?.channel_id ? "0x" + chan.channel_id : "–";
   $("memo").textContent = chan?.channel_id ? "zklane:v1:open:" + chan.channel_id : "–";
   const open = st === "open";
-  $("bOpen").disabled = busy || (chan && !["closed", "error"].includes(st));
+  $("bOpen").disabled = busy || (chan && !["closed", "error", "abandoned", "awaiting_funds"].includes(st));
   $("bFund").disabled = busy || st !== "awaiting_funds";
   for (const b of ["bPay", "bBurst", "bClose", "bSnap", "bCheat"]) $(b).disabled = busy || !open;
   $("waiting").innerHTML = st === "funding_sent" ? `<span style="color:var(--accent)">Waiting for block (~75 s on testnet)…</span>` :
