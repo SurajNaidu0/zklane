@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zkLane</title>
+<style>
+:root{
+  --bg:#0d1014;--panel:#151a21;--line:#262d38;--text:#e7ebf0;--muted:#8a95a5;
+  --accent:#f4b728;--ok:#3ecf8e;--bad:#ff5d5d;--info:#6aa8ff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:18px;margin:0;letter-spacing:.3px}
+header h1 b{color:var(--accent)}
+.pill{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pill.real{border-color:var(--ok);color:var(--ok)} .pill.mock{border-color:var(--accent);color:var(--accent)}
+main{padding:16px 20px;display:grid;gap:14px;max-width:1300px;margin:0 auto}
+.grid{display:grid;grid-template-columns:1fr 1.1fr 1.3fr;gap:14px}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.big{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .mono{font-family:var(--mono);font-size:12px;word-break:break-all}
+.row{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
+button{background:#222a35;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:8px 12px;font:inherit;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:600}
+button.danger{border-color:#5a2a2a;color:#ffb3b3}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.status{display:inline-block;font-weight:600;padding:2px 8px;border-radius:6px;background:#222a35}
+.status.open{color:var(--ok)} .status.closed{color:var(--muted)} .status.error{color:var(--bad)}
+.status.awaiting_funds,.status.funding_sent,.status.funded,.status.closing,.status.initializing{color:var(--accent)}
+.lane{position:relative;height:56px;border:1px dashed var(--line);border-radius:28px;margin:12px 0;overflow:hidden}
+.lane .end{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)}
+.lane .l{left:12px}.lane .r{right:12px}
+.pkt{position:absolute;top:50%;left:60px;width:22px;height:22px;margin-top:-11px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#ffe08a,var(--accent));box-shadow:0 0 12px var(--accent);animation:fly .7s ease-in forwards}
+@keyframes fly{to{left:calc(100% - 80px);opacity:.2}}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);font-size:13px}
+th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+td.redact{color:var(--muted);font-style:italic}
+tr.new{animation:flash 1.2s}
+@keyframes flash{from{background:#3a3110}to{background:transparent}}
+.ledger{max-height:300px;overflow:auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.chain{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.tx{min-width:240px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#11161c}
+.tx.ours{border-color:var(--accent)}
+.tx a{color:var(--info)}
+.alert{border-radius:10px;padding:14px;border:1px solid var(--bad);background:#2a1214;display:none}
+.alert h3{margin:0 0 6px;color:var(--bad)}
+.alert.show{display:block}
+#log{font-family:var(--mono);font-size:11.5px;max-height:160px;overflow:auto;color:var(--muted);white-space:pre-wrap}
+.kv{font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1><b>zk</b>Lane</h1>
+  <span id="mode" class="pill">…</span>
+  <span class="pill">zkChannels (libzkchannels) · Zcash testnet</span>
+  <span class="muted" style="margin-left:auto">height <b id="height">–</b></span>
+</header>
+
+<main>
+  <div class="alert" id="cheat">
+    <h3>Cheating attempt detected: revoked state</h3>
+    <div>The customer tried to close with an <b>old channel state</b> claiming <b id="cheatAmt"></b>.
+      The merchant holds the revocation secret for that state, so the <b>refund was refused</b>.</div>
+    <div class="mono" id="cheatEv" style="margin-top:6px"></div>
+  </div>
+
+  <div class="grid">
+    <!-- customer -->
+    <section class="card">
+      <h2>Customer (agent)</h2>
+      <div class="row"><span class="muted">Wallet (shielded)</span><span id="custBal">–</span></div>
+      <div class="row"><span class="muted">Channel balance</span><span><span class="big" id="chanBal">–</span> <span class="muted">units</span></span></div>
+      <div class="muted kv" id="unitInfo"></div>
+      <div class="btns">
+        <button class="primary" id="bOpen">Open channel</button>
+        <button id="bFund" disabled>Fund (shielded tx)</button>
+      </div>
+      <div class="btns">
+        <button id="bPay" disabled>Pay 10</button>
+        <button id="bBurst" disabled>Burst ×10</button>
+        <button id="bClose" disabled>Close + refund</button>
+      </div>
+      <div class="btns">
+        <button class="danger" id="bSnap" disabled title="save current local state">① Save state</button>
+        <button class="danger" id="bCheat" disabled title="close with the saved, now-revoked state">② Cheat: close with old state</button>
+      </div>
+    </section>
+
+    <!-- lane -->
+    <section class="card">
+      <h2>Lane</h2>
+      <div class="row"><span class="muted">Status</span><span class="status" id="status">no channel</span></div>
+      <div class="lane" id="lane"><span class="end l">customer</span><span class="end r">merchant</span></div>
+      <div class="kv"><span class="muted">zkChannels id</span><div class="mono" id="cid">–</div></div>
+      <div class="kv" style="margin-top:6px"><span class="muted">Funding memo</span><div class="mono" id="memo">–</div></div>
+      <div class="kv" style="margin-top:6px" id="waiting"></div>
+    </section>
+
+    <!-- merchant -->
+    <section class="card">
+      <h2>Merchant: what it learns</h2>
+      <div class="row"><span class="muted">Known customers</span><b id="known">0</b></div>
+      <div class="ledger">
+        <table><thead><tr><th>#</th><th>payer</th><th>amount</th><th>item</th><th>latency</th></tr></thead>
+        <tbody id="ledger"></tbody></table>
+      </div>
+      <div class="muted kv" style="margin-top:6px">Each row is a verified NIZK proof: valid, unrevoked channel state with enough balance. No channel id, no balance, no link between rows.</div>
+    </section>
+  </div>
+
+  <section class="stats">
+    <div class="card"><h2>Off-chain payments</h2><div class="big" id="sPays">0</div></div>
+    <div class="card"><h2>On-chain txs</h2><div class="big" id="sTx">0</div></div>
+    <div class="card"><h2>Avg latency</h2><div class="big"><span id="sLat">–</span><span class="muted" style="font-size:14px"> ms</span></div></div>
+    <div class="card"><h2>Linkable payments</h2><div class="big" id="sLink" style="color:var(--ok)">0</div></div>
+  </section>
+
+  <section class="card">
+    <h2>Chain (our transactions)</h2>
+    <div class="chain" id="chain"><span class="muted">No on-chain transactions yet.</span></div>
+  </section>
+
+  <section class="card"><h2>Event log</h2><div id="log"></div></section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let S = { mode: "mock", unit_zats: 10000, explorer: "" };
+let chan = null;
+let busy = false;
+
+const api = async (path, body) => {
+  const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+};
+const zec = (z) => (z / 1e8).toFixed(4) + " ZEC";
+const log = (s) => { const el = $("log"); el.textContent = new Date().toLocaleTimeString() + "  " + s + "\n" + el.textContent; };
+const short = (h) => h ? h.slice(0, 10) + "…" + h.slice(-8) : "–";
+
+function render() {
+  const st = chan?.status || "no channel";
+  $("status").textContent = st.replace("_", " ");
+  $("status").className = "status " + st;
+  $("cid").textContent = chan?.channel_id ? "0x" + chan.channel_id : "–";
+  $("memo").textContent = chan?.channel_id ? "zklane:v1:open:" + chan.channel_id : "–";
+  const open = st === "open";
+  $("bOpen").disabled = busy || (chan && !["closed", "error"].includes(st));
+  $("bFund").disabled = busy || st !== "awaiting_funds";
+  for (const b of ["bPay", "bBurst", "bClose", "bSnap", "bCheat"]) $(b).disabled = busy || !open;
+  $("waiting").innerHTML = st === "funding_sent" ? `<span style="color:var(--accent)">Waiting for block (~75 s on testnet)…</span>` :
+    st === "funded" ? `<span style="color:var(--accent)">Funded. Running activate + unlink…</span>` : "";
+  const txs = [];
+  if (chan?.open_txid) txs.push({ kind: "open", txid: chan.open_txid, sub: chan.open_height ? "block " + chan.open_height : "pending" });
+  if (chan?.close_txid) txs.push({ kind: "refund", txid: chan.close_txid, sub: zec(chan.refund_zats || 0) + " to fresh address" });
+  $("sTx").textContent = txs.length;
+  $("chain").innerHTML = txs.length ? txs.map((t) => `<div class="tx ours"><b>${t.kind === "open" ? "Channel open" : "Close / refund"}</b>
+      <div class="muted kv">shielded · amount &amp; addresses hidden on-chain</div>
+      <div class="mono">${short(t.txid)}</div><div class="kv muted">${t.sub}</div>
+      ${S.mode === "real" ? `<a class="kv" target="_blank" href="${S.explorer}${t.txid}">view on explorer ↗</a>` : `<span class="kv muted">(mock chain)</span>`}</div>`).join("")
+    : `<span class="muted">No on-chain transactions yet.</span>`;
+}
+
+async function refreshChan() {
+  if (!chan) return;
+  chan = await api("/api/channels/" + chan.name);
+  render();
+}
+async function refreshBal() {
+  if (chan?.status !== "open") { if (chan?.final_cust_units != null) $("chanBal").textContent = chan.final_cust_units; else if (chan) $("chanBal").textContent = chan.cust_units; return; }
+  try { const b = await api(`/api/channels/${chan.name}/balance`); $("chanBal").textContent = b.cust_units; } catch {}
+}
+async function refreshWallets() {
+  try { const w = await api("/api/wallets"); $("custBal").textContent = w.customer ? zec(w.customer.totalZats) : "–"; } catch {}
+}
+async function refreshLedger() {
+  const { payments, stats } = await api("/api/merchant/payments");
+  $("ledger").innerHTML = payments.map((p) => `<tr><td>${p.n}</td><td class="redact">unknown</td><td>${p.amount_units} u <span class="muted">(${zec(p.amount_units * S.unit_zats)})</span></td><td>${p.item}</td><td>${p.latency_ms} ms</td></tr>`).join("");
+  $("sPays").textContent = stats.n;
+  $("sLat").textContent = stats.n ? Math.round(stats.avg_ms) : "–";
+}
+
+async function act(label, fn) {
+  busy = true; render();
+  try { await fn(); } catch (e) { log("✗ " + label + ": " + e.message); }
+  busy = false; await refreshChan(); render(); refreshBal();
+}
+
+$("bOpen").onclick = () => act("open", async () => {
+  $("cheat").classList.remove("show");
+  log("opening channel (zkChannels open + init)…");
+  const r = await api("/api/channels", {});
+  chan = { name: r.name }; try { localStorage.setItem("zklane.chan", r.name); } catch {}
+  log("channel 0x" + r.channel_id.slice(0, 16) + "… initialized, awaiting funds");
+});
+$("bFund").onclick = () => act("fund", async () => {
+  log("customer wallet sending shielded funding tx…");
+  const r = await api(`/api/channels/${chan.name}/fund`, {});
+  log("funding tx sent " + short(r.txid));
+});
+const pay = async (amount, item) => {
+  const r = await api(`/api/channels/${chan.name}/pay`, { amount, item });
+  return r;
+};
+$("bPay").onclick = () => act("pay", async () => { await pay(10, "coffee"); await refreshBal(); });
+$("bBurst").onclick = () => act("burst", async () => {
+  for (let i = 1; i <= 10; i++) await pay(5, "api-call-" + i);
+  await refreshBal();
+});
+$("bClose").onclick = () => act("close", async () => {
+  log("closing: customer close msg → merchant verifies → refund…");
+  const r = await api(`/api/channels/${chan.name}/close`, {});
+  log(r.verdict === "valid" ? `refund ${zec(r.refund_zats)} sent ${short(r.txid)}` : "close refused: " + r.verdict);
+});
+$("bSnap").onclick = () => act("snapshot", async () => {
+  const r = await api(`/api/channels/${chan.name}/snapshot`, {});
+  log(`saved local state (balance ${r.cust_units}). Now make a payment, then try to cheat.`);
+});
+$("bCheat").onclick = () => act("cheat", async () => {
+  log("customer restores OLD state and tries to close with it…");
+  const r = await api(`/api/channels/${chan.name}/cheat-close`, {});
+  if (!r.refused) log("not a revoked state: " + (r.note || r.verdict));
+});
+
+// live events
+const es = new EventSource("/events");
+const on = (t, f) => es.addEventListener(t, (e) => f(JSON.parse(e.data)));
+on("chain.height", (d) => ($("height").textContent = d.height));
+on("payment.received", (d) => {
+  log(`payment #${d.n}: ${d.amount_units} units, proof verified in ${d.latency_ms} ms`);
+  const p = document.createElement("div"); p.className = "pkt"; $("lane").appendChild(p); setTimeout(() => p.remove(), 800);
+  refreshLedger().then(() => $("ledger").firstElementChild?.classList.add("new"));
+});
+on("payment.rejected", (d) => log(`payment of ${d.amount_units} rejected by merchant`));
+for (const t of ["channel.funding_sent", "channel.confirming", "channel.funded", "channel.open", "channel.closing", "channel.closed", "channel.error", "cheat.snapshot", "cheat.attempt"]) {
+  const quiet = t.startsWith("cheat."); // don't peek balance mid-cheat (old state temporarily restored)
+  on(t, async (d) => {
+    log(t + (d.txid ? " " + short(d.txid) : "") + (d.error ? " " + d.error : "") + (d.conf != null ? ` (${d.conf} conf)` : ""));
+    if (quiet) return;
+    await refreshChan(); if (!busy) refreshBal(); refreshWallets();
+  });
+}
+on("cheat.detected", (d) => {
+  $("cheatAmt").textContent = `${d.claimed_units} units (${zec(d.claimed_zats)})`;
+  $("cheatEv").textContent = `rev_lock ${d.rev_lock}\nrev_secret ${d.rev_secret}`;
+  $("cheat").classList.add("show");
+  log("⚠ cheat detected: revoked state, refund refused");
+});
+
+(async () => {
+  S = await api("/api/status");
+  $("mode").textContent = S.mode === "real" ? "Zcash: REAL testnet" : "Zcash: MOCK chain";
+  $("mode").className = "pill " + S.mode;
+  $("height").textContent = S.height || "–";
+  $("unitInfo").textContent = `1 unit = ${zec(S.unit_zats)} · channel size ${zec(S.open_zats)}`;
+  let saved = null; try { saved = localStorage.getItem("zklane.chan"); } catch {}
+  const all = await api("/api/channels");
+  const c = all.find((x) => x.name === saved) || all[0];
+  if (c) chan = c;
+  render(); refreshLedger(); refreshWallets(); refreshBal();
+  setInterval(refreshWallets, 30000);
+  setInterval(() => { if (chan && ["funding_sent", "funded", "awaiting_funds"].includes(chan.status)) refreshChan(); }, 5000);
+})();
+</script>
+</body>
+</html>

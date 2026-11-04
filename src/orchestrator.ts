@@ -9,6 +9,7 @@ export class Orchestrator {
   zk = new ZkCli();
   height = 0;
   private watching = false;
+  private cheating = new Set<string>();
 
   constructor(public customerWallet: ZcashWallet, public merchantWallet: ZcashWallet) {}
 
@@ -167,6 +168,7 @@ export class Orchestrator {
   async cheatClose(name: string) {
     const c = this.get(name);
     if (c.status !== "open") throw httpErr(409, `channel is ${c.status}`);
+    this.cheating.add(name);
     await this.zk.snapshotCustState(name, "honest");
     await this.zk.restoreCustState(name, "old");
     try {
@@ -179,11 +181,13 @@ export class Orchestrator {
     } finally {
       // put the honest state back so the channel can still be closed properly
       await this.zk.restoreCustState(name, "honest");
+      this.cheating.delete(name);
     }
   }
 
   /** customer's current balance (read from a dry-run close message; local only) */
   async peekBalance(name: string) {
+    if (this.cheating.has(name)) throw httpErr(409, "cheat attempt in progress");
     const cc = await this.zk.custClose(name, "peek");
     return cc.custBal;
   }

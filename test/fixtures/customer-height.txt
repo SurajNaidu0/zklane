@@ -1,0 +1,4 @@
+[2m2026-11-04T09:30:18.821745Z[0m [31mERROR[0m [2mpepper_sync::client::fetch[0m[2m:[0m [3merror[0m[2m=[0mcode: 'The operation was cancelled', message: "Timeout expired", source: tonic::transport::Error(Transport, TimeoutExpired(()))
+{
+  "height": 4581599
+}

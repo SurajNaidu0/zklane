@@ -1,0 +1,10 @@
+[
+  {
+    "account": 0,
+    "address_index": 0,
+    "has_orchard": true,
+    "has_sapling": false,
+    "has_transparent": false,
+    "encoded_address": "utest15q9966sc6etdutq6e32d9490p0xn7lqjpv7np8xalms3hwnyz6h5f260ku4w32pykyrr0g7dg7ejq5mmw8vsr3gcwx77ckq2x5xngreh"
+  }
+]
