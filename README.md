@@ -107,6 +107,27 @@ No testnet ZEC was obtainable from faucets, so the end-to-end run used **Zcash m
 
 Both are fully shielded: 0 transparent inputs and 0 transparent outputs, so no amounts or addresses are visible on-chain.
 
+### The mainnet run, step by step
+
+1. **Channel setup (off-chain, 20:32 IST).** Customer and merchant ran zkChannels `open` and `init` as separate processes. The merchant issued its CL public parameters, and the customer received a blind initial close token. zkChannels channel id: `0x83092118e8f7f38c935205fcb20ffa2a47eaa0915d71587aeb83b08b1e9caa71`. Channel size: 980 units (1 unit = 1,000 zats), so 0.0098 ZEC.
+2. **Funding (on-chain, block 3541708, about 20:42 IST).** The customer wallet sent one Orchard-shielded transaction of 980,000 zats to the merchant's unified address, with the encrypted memo `zklane:v1:open:83092118…caa71`. On-chain it is 9,166 bytes with **0 transparent inputs and 0 transparent outputs**: an observer sees that a shielded transaction happened, but not the amount, sender, receiver, or memo.
+3. **Activation.** The merchant's watcher decrypted the memo, matched the channel id, waited for confirmation, and only then ran `activate --escrow-txid 5ac0cd81…` (our patch to libzkchannels) followed by `unlink`. The channel was now live.
+4. **12 private payments (off-chain).** 2 × 10 units and 10 × 5 units, 70 units (0.0007 ZEC) in total. Each payment ran the zkChannels pay protocol: the customer proved in zero knowledge that it holds a valid, unrevoked channel state with enough balance, and revealed the revocation lock of its previous state. The merchant verified each proof in **273–304 ms (average 280 ms)**. The merchant's log recorded only amount, item and latency, with no channel id, payer or balance.
+5. **Close (on-chain, block 3541722, about 21:00 IST).** The customer produced its close message (final balance 910 units, signed by the merchant's close token). The merchant checked it against every revocation lock it had collected: no match, so it was an honest close (*"Valid close!"*). The merchant wallet then sent a shielded refund of **900,000 zats** (910 units minus the 10,000-zat network fee) to a **freshly generated** customer address, with memo `zklane:v1:close:<channel_id>:910`. Again 0 transparent inputs and outputs.
+
+**Net result:** 2 on-chain transactions carried 12 payments. On-chain, nothing links the funding to the refund: different addresses, shielded amounts, 14 blocks apart. Off-chain, nothing links the payments to each other or to the channel.
+
+| | Funding (open) | Refund (close) |
+|---|---|---|
+| txid | `5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9` | `5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3` |
+| Block | 3541708 | 3541722 |
+| Pool | Orchard (shielded) | Orchard (shielded) |
+| Transparent in/out | 0 / 0 | 0 / 0 |
+| Value (private, from our logs) | 980,000 zats | 900,000 zats |
+| Memo (encrypted) | `zklane:v1:open:<channel_id>` | `zklane:v1:close:<channel_id>:910` |
+
+Not exercised on mainnet: the cheat/revoked-state close. It is shown in the mock-mode demo and in `scripts/demo.sh`, using the same libzkchannels code path.
+
 ## Demo video
 
 [`docs/media/zklane-demo.mp4`](docs/media/zklane-demo.mp4) (63 s): the UI walkthrough in mock-chain mode (open → fund → ZK payments → cheat refused → refund), ending with the real mainnet txids above.
