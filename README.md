@@ -4,7 +4,7 @@
 
 zkLane wires the real **zkChannels** protocol (Bolt Labs' `libzkchannels`: CL signatures, Pedersen commitments, range proofs, NIZK proofs) to **real shielded Zcash testnet transactions** for funding and refund.
 
-Built for Free Society Hack: Zcash Privacy track.
+Built for Free Society Hack: Zcash Privacy track. **Demo video:** [`docs/media/zklane-demo.mp4`](docs/media/zklane-demo.mp4)
 
 ---
 
@@ -104,13 +104,24 @@ web/index.html         UI
 scripts/demo.sh        end-to-end acceptance script
 ```
 
-## Testnet transactions
+## Real on-chain transactions (Zcash mainnet)
 
-| | txid |
-|---|---|
-| Channel open (shielded) | _pending faucet funding_ |
-| Close / refund (shielded) | _pending_ |
+No testnet ZEC was obtainable from faucets, so the end-to-end run used **Zcash mainnet** with the same code (`ZCASH_MODE=real ZCASH_CHAIN=mainnet`). The project owner operated the wallet.
+
+| Step | txid | Block |
+|---|---|---|
+| Channel open: shielded funding, 0.0098 ZEC, memo `zklane:v1:open:<channel_id>` | [`5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9`](https://blockchair.com/zcash/transaction/5ac0cd816b4c0a4e62b2c0f60892ee1d9ec042ae0134ef27db86ff44355cd6f9) | 3541708 |
+| 12 off-chain zkChannels payments (70 units), 270–300 ms each | off-chain | |
+| Close: shielded refund of 910 units to a fresh customer address | [`5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3`](https://blockchair.com/zcash/transaction/5db5e55cd1b1a7a57ca035113d2082aaf6bee309650ea2ba897bb28a8071a1b3) | 3541722 |
+
+Both are fully shielded: 0 transparent inputs and 0 transparent outputs, so no amounts or addresses are visible on-chain.
+
+## Demo video
+
+[`docs/media/zklane-demo.mp4`](docs/media/zklane-demo.mp4) (63 s): the UI walkthrough in mock-chain mode (open → fund → ZK payments → cheat refused → refund), ending with the real mainnet txids above.
+
+![cheat detected](docs/media/cheat-detected.png)
 
 ## Limits
 
-Testnet only. Escrow is custodial. Amounts are in units of 0.0001 ZEC. Timing correlation is still possible at the network level. Single merchant.
+Escrow is custodial. Use tiny amounts only (the mainnet run used 0.0098 ZEC). Amounts are in units of 0.0001 ZEC. Timing correlation is still possible at the network level. Single merchant.
